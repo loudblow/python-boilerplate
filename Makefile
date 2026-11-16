@@ -43,6 +43,34 @@ init: ## Initialize new project, usage "make init python=version"
 	@poetry env use python$(python)
 
 
+ifneq ($(filter clone,$(MAKECMDGOALS)),)
+CLONE_DEST := $(word 2,$(MAKECMDGOALS))
+.PHONY: $(CLONE_DEST)
+$(CLONE_DEST): ; @:
+endif
+
+.PHONY: clone
+clone: ## Create a new project from this boilerplate, usage "make clone ~/path/NewProject"
+	@set -e; \
+	dest="$(CLONE_DEST)"; \
+	if [ -z "$$dest" ]; then echo "error: destination is required, usage: make clone <path>" >&2; exit 1; fi; \
+	if [ -e "$$dest" ]; then echo "error: '$$dest' already exists" >&2; exit 1; fi; \
+	mkdir -p "$$dest"; \
+	git ls-files -z --cached --others --exclude-standard | tar --null -T - -cf - | tar -xf - -C "$$dest"; \
+	cd "$$dest"; \
+	: > README.md; \
+	: > AGENTS.md; \
+	ln -s AGENTS.md CLAUDE.md; \
+	git init --quiet; \
+	poetry \
+		--dev-dependency="pre-commit@^4.5.1" \
+		--dev-dependency="ruff@~0.15.7" \
+		--dev-dependency="pytest@^9.0.2" \
+		--dev-dependency="pytest-coverage@~0.0" \
+		init --license Apache-2.0; \
+	echo "Project created: $$dest"
+
+
 .PHONY: install-env
 install-env: ## Install the development environment if it doesn't exists
 	@poetry install
